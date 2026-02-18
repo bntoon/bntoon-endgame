@@ -126,7 +126,7 @@ export function FeaturedHero({ series }: FeaturedHeroProps) {
 
   return (
     <div
-      className="group relative rounded-xl shadow-md border border-border overflow-hidden bg-card/95 backdrop-blur-sm transition-shadow duration-300 hover:shadow-lg"
+      className="rounded-xl shadow-md border border-border overflow-hidden bg-card"
       onMouseEnter={() => setIsAutoPlaying(false)}
       onMouseLeave={() => setIsAutoPlaying(true)}
       onFocus={() => setIsAutoPlaying(false)}
