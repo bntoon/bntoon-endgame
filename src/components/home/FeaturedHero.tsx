@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, type KeyboardEvent, type TouchEvent } from "react";
 import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight, BookOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +37,8 @@ export function FeaturedHero({ series }: FeaturedHeroProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
 
   const featuredSeries = series.slice(0, 5);
 
@@ -59,8 +61,6 @@ export function FeaturedHero({ series }: FeaturedHeroProps) {
   const handlePrev = () => {
     const newIndex = (currentIndex - 1 + featuredSeries.length) % featuredSeries.length;
     handleTransition(newIndex);
-    setIsAutoPlaying(false);
-    setTimeout(() => setIsAutoPlaying(true), 10000);
   };
 
   const handleNext = () => {
@@ -68,11 +68,55 @@ export function FeaturedHero({ series }: FeaturedHeroProps) {
     handleTransition(newIndex);
   };
 
+  const temporarilyPauseAutoplay = () => {
+    setIsAutoPlaying(false);
+    setTimeout(() => setIsAutoPlaying(true), 10000);
+  };
+
+  const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    touchStartX.current = event.changedTouches[0]?.clientX ?? null;
+    touchEndX.current = null;
+  };
+
+  const handleTouchMove = (event: TouchEvent<HTMLDivElement>) => {
+    touchEndX.current = event.changedTouches[0]?.clientX ?? null;
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStartX.current === null || touchEndX.current === null) return;
+
+    const swipeDistance = touchStartX.current - touchEndX.current;
+    const minSwipeDistance = 40;
+
+    if (Math.abs(swipeDistance) < minSwipeDistance) return;
+
+    if (swipeDistance > 0) {
+      handleNext();
+    } else {
+      handlePrev();
+    }
+
+    temporarilyPauseAutoplay();
+  };
+
+  const handleKeyNavigation = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      handlePrev();
+      temporarilyPauseAutoplay();
+    }
+
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      handleNext();
+      temporarilyPauseAutoplay();
+    }
+  };
+
   const goToSlide = (index: number) => {
     if (index === currentIndex) return;
     handleTransition(index);
-    setIsAutoPlaying(false);
-    setTimeout(() => setIsAutoPlaying(true), 10000);
+    temporarilyPauseAutoplay();
   };
 
   if (featuredSeries.length === 0) return null;
@@ -81,7 +125,19 @@ export function FeaturedHero({ series }: FeaturedHeroProps) {
   const status = statusConfig[current.status] || statusConfig.ongoing;
 
   return (
-    <div className="rounded-xl shadow-md border border-border overflow-hidden bg-card">
+    <div
+      className="rounded-xl shadow-md border border-border overflow-hidden bg-card"
+      onMouseEnter={() => setIsAutoPlaying(false)}
+      onMouseLeave={() => setIsAutoPlaying(true)}
+      onFocus={() => setIsAutoPlaying(false)}
+      onBlur={() => setIsAutoPlaying(true)}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onKeyDown={handleKeyNavigation}
+      tabIndex={0}
+      aria-label="Featured series carousel"
+    >
       {/* Main clickable card */}
       <Link
         to={`/series/${current.id}`}
@@ -158,7 +214,7 @@ export function FeaturedHero({ series }: FeaturedHeroProps) {
       {/* Dots navigation */}
       {featuredSeries.length > 1 && (
         <div className="flex items-center justify-center gap-2 py-2 px-3 border-t border-border/50">
-          <button onClick={(e) => { e.preventDefault(); handlePrev(); }} className="p-1 rounded-full hover:bg-accent text-muted-foreground">
+          <button onClick={(e) => { e.preventDefault(); handlePrev(); temporarilyPauseAutoplay(); }} className="p-1 rounded-full hover:bg-accent text-muted-foreground">
             <ChevronLeft className="h-3.5 w-3.5" />
           </button>
           <div className="flex items-center gap-1">
@@ -173,7 +229,7 @@ export function FeaturedHero({ series }: FeaturedHeroProps) {
               />
             ))}
           </div>
-          <button onClick={(e) => { e.preventDefault(); handleNext(); setIsAutoPlaying(false); setTimeout(() => setIsAutoPlaying(true), 10000); }} className="p-1 rounded-full hover:bg-accent text-muted-foreground">
+          <button onClick={(e) => { e.preventDefault(); handleNext(); temporarilyPauseAutoplay(); }} className="p-1 rounded-full hover:bg-accent text-muted-foreground">
             <ChevronRight className="h-3.5 w-3.5" />
           </button>
         </div>
