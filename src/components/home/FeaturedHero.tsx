@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type TouchEvent } from "react";
+import { useState, useEffect, useRef, type KeyboardEvent, type TouchEvent } from "react";
 import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -39,7 +39,6 @@ export function FeaturedHero({ series }: FeaturedHeroProps) {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
-  const resumeTimeoutRef = useRef<number | null>(null);
 
   const featuredSeries = series.slice(0, 5);
 
@@ -91,10 +90,9 @@ export function FeaturedHero({ series }: FeaturedHeroProps) {
     handleTransition(newIndex);
   };
 
-  const goToSlide = (index: number) => {
-    if (index === currentIndex) return;
-    handleTransition(index);
-    scheduleAutoplayResume();
+  const temporarilyPauseAutoplay = () => {
+    setIsAutoPlaying(false);
+    setTimeout(() => setIsAutoPlaying(true), 10000);
   };
 
   const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
@@ -120,21 +118,27 @@ export function FeaturedHero({ series }: FeaturedHeroProps) {
       handlePrev();
     }
 
-    scheduleAutoplayResume();
+    temporarilyPauseAutoplay();
   };
 
   const handleKeyNavigation = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "ArrowLeft") {
       event.preventDefault();
       handlePrev();
-      scheduleAutoplayResume();
+      temporarilyPauseAutoplay();
     }
 
     if (event.key === "ArrowRight") {
       event.preventDefault();
       handleNext();
-      scheduleAutoplayResume();
+      temporarilyPauseAutoplay();
     }
+  };
+
+  const goToSlide = (index: number) => {
+    if (index === currentIndex) return;
+    handleTransition(index);
+    temporarilyPauseAutoplay();
   };
 
   if (featuredSeries.length === 0) return null;
@@ -143,8 +147,8 @@ export function FeaturedHero({ series }: FeaturedHeroProps) {
   const status = statusConfig[current.status] || statusConfig.ongoing;
 
   return (
-    <section
-      className="overflow-hidden rounded-xl border border-white/10 bg-[#110b12] shadow-[0_0_40px_rgba(31,9,32,0.45)]"
+    <div
+      className="rounded-xl shadow-md border border-border overflow-hidden bg-card"
       onMouseEnter={() => setIsAutoPlaying(false)}
       onMouseLeave={() => setIsAutoPlaying(true)}
       onFocus={() => setIsAutoPlaying(false)}
@@ -156,44 +160,77 @@ export function FeaturedHero({ series }: FeaturedHeroProps) {
       tabIndex={0}
       aria-label="Featured series carousel"
     >
-      <div className="relative border-b border-white/10 bg-gradient-to-r from-[#190810] via-[#16070f] to-[#0f0f18] px-4 py-5 sm:px-6 sm:py-6">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(214,38,96,0.2),transparent_55%)]" />
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_95%_10%,rgba(67,56,202,0.2),transparent_45%)]" />
+      {/* Main clickable card */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-primary/[0.06] via-transparent to-transparent" />
 
-        <Link
-          to={`/series/${current.id}`}
-          className={`relative grid grid-cols-[96px_1fr] items-center gap-4 sm:grid-cols-[128px_1fr] sm:gap-6 transition-opacity duration-300 ${
-            isTransitioning ? "opacity-0" : "opacity-100"
-          }`}
-        >
-          <div className="relative aspect-[3/4] overflow-hidden rounded-md ring-1 ring-white/20">
-            <img
-              src={current.cover_url || current.banner_url || ""}
-              alt={current.title}
-              className="h-full w-full object-cover"
-              loading="eager"
-            />
+      <Link
+        to={`/series/${current.id}`}
+        className={`relative flex flex-row items-stretch transition-opacity duration-300 ${isTransitioning ? "opacity-0" : "opacity-100"}`}
+      >
+        {/* Cover image - left side */}
+        <div className="w-28 sm:w-36 md:w-44 shrink-0 relative overflow-hidden">
+          <img
+            src={current.cover_url || current.banner_url || ""}
+            alt={current.title}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            loading="eager"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-card/70" />
+        </div>
+
+        {/* Text content - right side */}
+        <div className="flex-1 p-3 sm:p-4 md:p-5 flex flex-col justify-center gap-2 min-w-0 bg-gradient-to-br from-card to-card/80">
+          {/* Type + Status badges */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {current.type && (
+              <Badge
+                className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 border-0 shadow-sm ${
+                  current.type === "manga"
+                    ? "bg-rose-500 text-white"
+                    : current.type === "manhua"
+                    ? "bg-amber-500 text-white"
+                    : "bg-sky-500 text-white"
+                }`}
+              >
+                {current.type}
+              </Badge>
+            )}
+            <Badge className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 ${status.color} text-white border-0 shadow-sm`}>
+              {status.label}
+            </Badge>
           </div>
 
-          <div className="min-w-0 space-y-2 text-white">
-            <div className="flex items-center gap-2">
-              <div className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-yellow-400/15 text-yellow-300 ring-1 ring-yellow-300/30">
-                <Star className="h-4 w-4 fill-current" />
-              </div>
-              <span className="text-sm font-semibold text-yellow-300">9.3</span>
+          {/* Title */}
+          <h2 className="font-display text-sm sm:text-base md:text-lg font-bold text-foreground leading-tight line-clamp-2 tracking-tight">
+            {current.title}
+          </h2>
+
+          {/* Genres */}
+          {current.genres && current.genres.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {current.genres.slice(0, 3).map((genre) => (
+                <span
+                  key={genre.id}
+                  className="text-[10px] font-medium text-muted-foreground bg-muted/80 rounded-full px-2 py-0.5 border border-border/60"
+                >
+                  {genre.name}
+                </span>
+              ))}
             </div>
+          )}
 
-            <h2 className="font-display text-lg font-bold uppercase leading-tight tracking-wide sm:text-2xl">
-              {current.title}
-            </h2>
+          {/* Description */}
+          {current.description && (
+            <p className="text-muted-foreground/90 text-xs leading-relaxed line-clamp-2 hidden sm:block">
+              {current.description}
+            </p>
+          )}
 
-            <div className="flex flex-wrap items-center gap-2">
-              {current.type && (
-                <Badge className="border-0 bg-yellow-400/15 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-yellow-300">
-                  {current.type}
-                </Badge>
-              )}
-              <span className={`text-sm font-semibold ${status.color}`}>Status: {status.label}</span>
+          {/* Chapters count */}
+          {current.chaptersCount !== undefined && current.chaptersCount > 0 && (
+            <div className="flex items-center gap-1 rounded-md bg-muted/50 px-2 py-1 w-fit">
+              <BookOpen className="h-3 w-3 text-muted-foreground" />
+              <span className="text-[11px] font-medium text-muted-foreground">{current.chaptersCount} Chapters</span>
             </div>
 
             {current.genres && current.genres.length > 0 && (
@@ -215,40 +252,24 @@ export function FeaturedHero({ series }: FeaturedHeroProps) {
       </div>
 
       {featuredSeries.length > 1 && (
-        <div className="flex items-center justify-center gap-2 px-3 py-2.5 bg-[#11131a]">
-          <button
-            onClick={(event) => {
-              event.preventDefault();
-              handlePrev();
-              scheduleAutoplayResume();
-            }}
-            className="rounded-full p-1.5 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-            aria-label="Previous featured series"
-          >
-            <ChevronLeft className="h-4 w-4" />
+        <div className="flex items-center justify-center gap-2 py-2 px-3 border-t border-border/50">
+          <button onClick={(e) => { e.preventDefault(); handlePrev(); temporarilyPauseAutoplay(); }} className="p-1 rounded-full hover:bg-accent text-muted-foreground">
+            <ChevronLeft className="h-3.5 w-3.5" />
           </button>
-
-          {featuredSeries.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => goToSlide(index)}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                index === currentIndex ? "w-4 bg-yellow-400" : "w-2 bg-white/30 hover:bg-white/50"
-              }`}
-              aria-label={`Go to slide ${index + 1}`}
-            />
-          ))}
-
-          <button
-            onClick={(event) => {
-              event.preventDefault();
-              handleNext();
-              scheduleAutoplayResume();
-            }}
-            className="rounded-full p-1.5 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-            aria-label="Next featured series"
-          >
-            <ChevronRight className="h-4 w-4" />
+          <div className="flex items-center gap-1">
+            {featuredSeries.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => goToSlide(index)}
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  index === currentIndex ? "w-5 bg-primary" : "w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                }`}
+                aria-label={`Go to slide ${index + 1}`}
+              />
+            ))}
+          </div>
+          <button onClick={(e) => { e.preventDefault(); handleNext(); temporarilyPauseAutoplay(); }} className="p-1 rounded-full hover:bg-accent text-muted-foreground">
+            <ChevronRight className="h-3.5 w-3.5" />
           </button>
         </div>
       )}
