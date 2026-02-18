@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, type KeyboardEvent, type TouchEvent } from "react";
 import { Link } from "react-router-dom";
-import { ChevronLeft, ChevronRight, BookOpen } from "lucide-react";
+import { ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface Genre {
@@ -26,11 +26,11 @@ interface FeaturedHeroProps {
 }
 
 const statusConfig: Record<string, { color: string; label: string }> = {
-  ongoing: { color: "bg-emerald-500", label: "Ongoing" },
-  completed: { color: "bg-blue-500", label: "Completed" },
-  hiatus: { color: "bg-amber-500", label: "Hiatus" },
-  cancelled: { color: "bg-red-500", label: "Cancelled" },
-  dropped: { color: "bg-gray-500", label: "Dropped" },
+  ongoing: { color: "text-emerald-300", label: "Ongoing" },
+  completed: { color: "text-blue-300", label: "Completed" },
+  hiatus: { color: "text-amber-300", label: "Hiatus" },
+  cancelled: { color: "text-red-300", label: "Cancelled" },
+  dropped: { color: "text-gray-300", label: "Dropped" },
 };
 
 export function FeaturedHero({ series }: FeaturedHeroProps) {
@@ -42,20 +42,42 @@ export function FeaturedHero({ series }: FeaturedHeroProps) {
 
   const featuredSeries = series.slice(0, 5);
 
+  const scheduleAutoplayResume = () => {
+    setIsAutoPlaying(false);
+
+    if (resumeTimeoutRef.current) {
+      window.clearTimeout(resumeTimeoutRef.current);
+    }
+
+    resumeTimeoutRef.current = window.setTimeout(() => {
+      setIsAutoPlaying(true);
+    }, 8000);
+  };
+
   useEffect(() => {
     if (!isAutoPlaying || featuredSeries.length <= 1) return;
-    const interval = setInterval(() => {
-      handleNext();
+
+    const interval = window.setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % featuredSeries.length);
     }, 6000);
-    return () => clearInterval(interval);
-  }, [isAutoPlaying, featuredSeries.length, currentIndex]);
+
+    return () => window.clearInterval(interval);
+  }, [isAutoPlaying, featuredSeries.length]);
+
+  useEffect(() => {
+    return () => {
+      if (resumeTimeoutRef.current) {
+        window.clearTimeout(resumeTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleTransition = (newIndex: number) => {
     setIsTransitioning(true);
-    setTimeout(() => {
+    window.setTimeout(() => {
       setCurrentIndex(newIndex);
       setIsTransitioning(false);
-    }, 150);
+    }, 160);
   };
 
   const handlePrev = () => {
@@ -210,11 +232,25 @@ export function FeaturedHero({ series }: FeaturedHeroProps) {
               <BookOpen className="h-3 w-3 text-muted-foreground" />
               <span className="text-[11px] font-medium text-muted-foreground">{current.chaptersCount} Chapters</span>
             </div>
-          )}
-        </div>
-      </Link>
 
-      {/* Dots navigation */}
+            {current.genres && current.genres.length > 0 && (
+              <p className="line-clamp-1 text-sm text-white/80">{current.genres.slice(0, 4).map((genre) => genre.name).join(", ")}</p>
+            )}
+
+            {current.description && (
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-wider text-white/75">Summary</p>
+                <p className="line-clamp-2 text-sm text-white/85">{current.description}</p>
+              </div>
+            )}
+
+            {current.chaptersCount !== undefined && current.chaptersCount > 0 && (
+              <p className="text-sm text-white/70">Chapters: {current.chaptersCount}</p>
+            )}
+          </div>
+        </Link>
+      </div>
+
       {featuredSeries.length > 1 && (
         <div className="flex items-center justify-center gap-2 py-2 px-3 border-t border-border/50">
           <button onClick={(e) => { e.preventDefault(); handlePrev(); temporarilyPauseAutoplay(); }} className="p-1 rounded-full hover:bg-accent text-muted-foreground">
@@ -237,6 +273,6 @@ export function FeaturedHero({ series }: FeaturedHeroProps) {
           </button>
         </div>
       )}
-    </div>
+    </section>
   );
 }
