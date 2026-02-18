@@ -139,27 +139,30 @@ export function FeaturedHero({ series }: FeaturedHeroProps) {
       aria-label="Featured series carousel"
     >
       {/* Main clickable card */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-primary/[0.06] via-transparent to-transparent" />
+
       <Link
         to={`/series/${current.id}`}
-        className={`flex flex-row items-stretch transition-opacity duration-300 ${isTransitioning ? "opacity-0" : "opacity-100"}`}
+        className={`relative flex flex-row items-stretch transition-opacity duration-300 ${isTransitioning ? "opacity-0" : "opacity-100"}`}
       >
         {/* Cover image - left side */}
-        <div className="w-28 sm:w-36 md:w-44 shrink-0">
+        <div className="w-28 sm:w-36 md:w-44 shrink-0 relative overflow-hidden">
           <img
             src={current.cover_url || current.banner_url || ""}
             alt={current.title}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             loading="eager"
           />
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-card/70" />
         </div>
 
         {/* Text content - right side */}
-        <div className="flex-1 p-3 sm:p-4 md:p-5 flex flex-col justify-center gap-1.5 min-w-0">
+        <div className="flex-1 p-3 sm:p-4 md:p-5 flex flex-col justify-center gap-2 min-w-0 bg-gradient-to-br from-card to-card/80">
           {/* Type + Status badges */}
           <div className="flex items-center gap-1.5 flex-wrap">
             {current.type && (
               <Badge
-                className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 border-0 ${
+                className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 border-0 shadow-sm ${
                   current.type === "manga"
                     ? "bg-rose-500 text-white"
                     : current.type === "manhua"
@@ -170,13 +173,13 @@ export function FeaturedHero({ series }: FeaturedHeroProps) {
                 {current.type}
               </Badge>
             )}
-            <Badge className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 ${status.color} text-white border-0`}>
+            <Badge className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 ${status.color} text-white border-0 shadow-sm`}>
               {status.label}
             </Badge>
           </div>
 
           {/* Title */}
-          <h2 className="font-display text-sm sm:text-base md:text-lg font-bold text-foreground leading-tight line-clamp-2">
+          <h2 className="font-display text-sm sm:text-base md:text-lg font-bold text-foreground leading-tight line-clamp-2 tracking-tight">
             {current.title}
           </h2>
 
@@ -186,7 +189,7 @@ export function FeaturedHero({ series }: FeaturedHeroProps) {
               {current.genres.slice(0, 3).map((genre) => (
                 <span
                   key={genre.id}
-                  className="text-[10px] font-medium text-muted-foreground bg-muted rounded-full px-2 py-0.5"
+                  className="text-[10px] font-medium text-muted-foreground bg-muted/80 rounded-full px-2 py-0.5 border border-border/60"
                 >
                   {genre.name}
                 </span>
@@ -196,14 +199,14 @@ export function FeaturedHero({ series }: FeaturedHeroProps) {
 
           {/* Description */}
           {current.description && (
-            <p className="text-muted-foreground text-xs leading-relaxed line-clamp-2 hidden sm:block">
+            <p className="text-muted-foreground/90 text-xs leading-relaxed line-clamp-2 hidden sm:block">
               {current.description}
             </p>
           )}
 
           {/* Chapters count */}
           {current.chaptersCount !== undefined && current.chaptersCount > 0 && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 rounded-md bg-muted/50 px-2 py-1 w-fit">
               <BookOpen className="h-3 w-3 text-muted-foreground" />
               <span className="text-[11px] font-medium text-muted-foreground">{current.chaptersCount} Chapters</span>
             </div>
